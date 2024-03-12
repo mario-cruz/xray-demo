@@ -1,11 +1,11 @@
 resource "aws_vpc" "vpc_app" {
-  cidr_block = "${var.network_cidr}"
-    tags = merge(
-        var.additional-tags,
-        {
-            Name = "MyVPC"
-        },
-    )
+  cidr_block = var.network_cidr
+  tags = merge(
+    var.additional-tags,
+    {
+      Name = "MyVPC"
+    },
+  )
 }
 
 resource "aws_subnet" "public" {
@@ -56,7 +56,7 @@ resource "aws_route_table" "private" {
   vpc_id = aws_vpc.vpc_app.id
 
   route {
-    cidr_block = "0.0.0.0/0"
+    cidr_block     = "0.0.0.0/0"
     nat_gateway_id = element(aws_nat_gateway.ngateway.*.id, count.index)
   }
 }

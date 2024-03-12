@@ -221,5 +221,5 @@ resource "aws_ecs_task_definition" "task01" {
     }
   ]
   TASK_DEFINITION
-  depends_on = [aws_db_instance.myinstance]
+  depends_on            = [aws_db_instance.myinstance]
 }

@@ -24,7 +24,7 @@ variable "network_cidr" {
 
 # number of containers running on the ECS Cluster
 variable "app_count" {
-  type = number
+  type    = number
   default = 1
 }
 

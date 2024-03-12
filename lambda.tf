@@ -43,13 +43,13 @@ resource "aws_iam_role_policy_attachment" "aws_xray_deamon_write_access" {
 # Lamda Start & Stop
 ################################################################################
 resource "aws_lambda_function" "image_api_scraper" {
-  function_name = "image-api-scraper"
-  filename      = "lambdas/lambda_function.zip"
-  role          = aws_iam_role.image_api_lambda_role.arn
-  handler       = "lambda_function.lambda_handler"
+  function_name    = "image-api-scraper"
+  filename         = "lambdas/lambda_function.zip"
+  role             = aws_iam_role.image_api_lambda_role.arn
+  handler          = "lambda_function.lambda_handler"
   source_code_hash = data.archive_file.lambda1.output_base64sha256
-  runtime = "python3.9"
-  timeout = 10
+  runtime          = "python3.9"
+  timeout          = 10
 
   environment {
     variables = {
@@ -67,8 +67,8 @@ resource "aws_lambda_function_url" "image_api_scraper_url" {
 }
 
 resource "aws_lambda_permission" "allow_ecs_task_role_to_call_lambda" {
-  statement_id = "AllowExecutionFromRole"
-  action = "lambda:InvokeFunction"
+  statement_id  = "AllowExecutionFromRole"
+  action        = "lambda:InvokeFunction"
   function_name = aws_lambda_function.image_api_scraper.function_name
-  principal = aws_iam_role.ecs_task_role.arn
+  principal     = aws_iam_role.ecs_task_role.arn
 }
