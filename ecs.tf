@@ -100,19 +100,20 @@ resource "aws_security_group" "task01" {
 ################################################################################
 # Load Balancer
 ################################################################################
-#checkov:skip=CKV_AWS_150
-#checkov:skip=CKV_AWS_131
-#checkov:skip=CKV_AWS_91
+
 resource "aws_lb" "alb" {
   name                       = "ecs-alb"
   subnets                    = aws_subnet.public.*.id
   security_groups            = [aws_security_group.alb.id]
+  #checkov:skip=CKV_AWS_150
+  #checkov:skip=CKV_AWS_131
+  #checkov:skip=CKV_AWS_91
   enable_deletion_protection = false
   drop_invalid_header_fields = false
 }
 
-#checkov:skip=CKV_AWS_2
 resource "aws_lb_listener" "listener" {
+  #checkov:skip=CKV_AWS_2
   load_balancer_arn = aws_lb.alb.id
   port              = "80"
   protocol          = "HTTP"
@@ -123,8 +124,8 @@ resource "aws_lb_listener" "listener" {
   }
 }
 
-#checkov:skip=CKV_AWS_261
 resource "aws_lb_target_group" "tg" {
+  #checkov:skip=CKV_AWS_261
   name        = "app-tg"
   port        = 80
   protocol    = "HTTP"
