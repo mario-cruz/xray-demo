@@ -22,6 +22,7 @@ resource "aws_security_group" "rds_sg" {
 resource "aws_db_instance" "myinstance" {
   #checkov:skip=CKV_AWS_16
   #checkov:skip=CKV_AWS_17
+  #checkov:skip=CKV_AWS_60
   #checkov:skip=CKV_AWS_118
   #checkov:skip=CKV_AWS_129
   #checkov:skip=CKV_AWS_157

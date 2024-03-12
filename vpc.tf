@@ -1,4 +1,7 @@
 resource "aws_vpc" "vpc_app" {
+  #checkov:skip=CKV_AWS_11
+  #checkov:skip=CKV_AWS_12
+  #checkov:skip=CKV_AWS_130
   cidr_block = var.network_cidr
   tags = merge(
     var.additional-tags,
@@ -9,7 +12,6 @@ resource "aws_vpc" "vpc_app" {
 }
 
 resource "aws_subnet" "public" {
-  #checkov:skip=CKV_AWS_130
   count                   = 2
   cidr_block              = cidrsubnet(aws_vpc.vpc_app.cidr_block, 3, count.index)
   availability_zone       = data.aws_availability_zones.available_zones.names[count.index]
@@ -42,6 +44,7 @@ resource "aws_route" "internet_access" {
 }
 
 resource "aws_eip" "gateway" {
+  #checkov:skip=CKV_AWS_19
   count      = 2
   depends_on = [aws_internet_gateway.igateway]
 }

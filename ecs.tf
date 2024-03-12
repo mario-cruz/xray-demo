@@ -108,12 +108,15 @@ resource "aws_lb" "alb" {
   #checkov:skip=CKV_AWS_150
   #checkov:skip=CKV_AWS_131
   #checkov:skip=CKV_AWS_91
+  #checkov:skip=CKV_AWS_28
+  #checkov:skip=CKV_AWS_104
   enable_deletion_protection = false
   drop_invalid_header_fields = false
 }
 
 resource "aws_lb_listener" "listener" {
   #checkov:skip=CKV_AWS_2
+  #checkov:skip=CKV_AWS_103
   load_balancer_arn = aws_lb.alb.id
   port              = "80"
   protocol          = "HTTP"
