@@ -102,9 +102,9 @@ resource "aws_security_group" "task01" {
 ################################################################################
 
 resource "aws_lb" "alb" {
-  name                       = "ecs-alb"
-  subnets                    = aws_subnet.public.*.id
-  security_groups            = [aws_security_group.alb.id]
+  name            = "ecs-alb"
+  subnets         = aws_subnet.public.*.id
+  security_groups = [aws_security_group.alb.id]
   #checkov:skip=CKV_AWS_150
   #checkov:skip=CKV_AWS_131
   #checkov:skip=CKV_AWS_91
