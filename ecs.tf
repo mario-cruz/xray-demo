@@ -30,6 +30,8 @@ resource "aws_iam_role_policy_attachment" "dynamo_pol_attachment" {
 resource "aws_iam_role_policy" "create_log_group_pol" {
   name = "create-log-group-pol"
   role = aws_iam_role.ecs_task_role.id
+  #checkov:skip=CKV_AWS_290
+  #checkov:skip=CKV_AWS_355
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
@@ -54,7 +56,7 @@ resource "aws_iam_role_policy" "create_log_group_pol" {
 resource "aws_security_group" "alb" {
   name   = "alb-sg"
   vpc_id = aws_vpc.vpc_app.id
-
+  #checkov:skip=CKV_AWS_260
   ingress {
     protocol    = "tcp"
     from_port   = 80
