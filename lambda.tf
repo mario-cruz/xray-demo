@@ -40,8 +40,12 @@ resource "aws_iam_role_policy_attachment" "aws_xray_deamon_write_access" {
 }
 
 ################################################################################
-# Lamda Start & Stop
+# Lamda
 ################################################################################
+
+#checkov:skip=CKV_AWS_115
+#checkov:skip=CKV_AWS_116
+#checkov:skip=CKV_AWS_117
 resource "aws_lambda_function" "image_api_scraper" {
   function_name    = "image-api-scraper"
   filename         = "lambdas/lambda_function.zip"

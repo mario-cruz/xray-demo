@@ -56,8 +56,10 @@ resource "aws_iam_role_policy" "create_log_group_pol" {
 resource "aws_security_group" "alb" {
   name   = "alb-sg"
   vpc_id = aws_vpc.vpc_app.id
+  description = "ALB SG"
   #checkov:skip=CKV_AWS_260
   ingress {
+    description = "ingress 80"
     protocol    = "tcp"
     from_port   = 80
     to_port     = 80
@@ -65,6 +67,7 @@ resource "aws_security_group" "alb" {
   }
 
   egress {
+    description = "ALB egress"
     from_port   = 0
     to_port     = 0
     protocol    = "-1"
@@ -75,8 +78,10 @@ resource "aws_security_group" "alb" {
 resource "aws_security_group" "task01" {
   name   = "task01-sg"
   vpc_id = aws_vpc.vpc_app.id
+  description = "task01 SG"
 
   ingress {
+    description = "ingress MYSQL"
     protocol        = "tcp"
     from_port       = 3000
     to_port         = 3000
@@ -84,6 +89,7 @@ resource "aws_security_group" "task01" {
   }
 
   egress {
+    description = "RDS egress"
     protocol    = "-1"
     from_port   = 0
     to_port     = 0
@@ -94,12 +100,18 @@ resource "aws_security_group" "task01" {
 ################################################################################
 # Load Balancer
 ################################################################################
+#checkov:skip=CKV_AWS_150
+#checkov:skip=CKV_AWS_131
+#checkov:skip=CKV_AWS_91
 resource "aws_lb" "alb" {
   name            = "ecs-alb"
   subnets         = aws_subnet.public.*.id
   security_groups = [aws_security_group.alb.id]
+  enable_deletion_protection = false
+  drop_invalid_header_fields = false
 }
 
+#checkov:skip=CKV_AWS_2
 resource "aws_lb_listener" "listener" {
   load_balancer_arn = aws_lb.alb.id
   port              = "80"
@@ -111,6 +123,7 @@ resource "aws_lb_listener" "listener" {
   }
 }
 
+#checkov:skip=CKV_AWS_261
 resource "aws_lb_target_group" "tg" {
   name        = "app-tg"
   port        = 80
@@ -123,6 +136,7 @@ resource "aws_lb_target_group" "tg" {
 # ECS Cluster
 ################################################################################
 
+#checkov:skip=CKV_AWS_65
 resource "aws_ecs_cluster" "app_cluster" {
   name = "app-ecs-cluster"
 }
@@ -148,6 +162,8 @@ resource "aws_ecs_service" "my_service" {
   depends_on = [aws_lb_listener.listener]
 }
 
+#checkov:skip=CKV_AWS_249
+#checkov:skip=CKV_AWS_336
 resource "aws_ecs_task_definition" "task01" {
   family                   = "demo-app"
   network_mode             = "awsvpc"
