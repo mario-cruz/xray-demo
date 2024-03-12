@@ -1,6 +1,6 @@
 resource "aws_vpc" "vpc_app" {
-  #checkov:skip=CKV_AWS_11
-  #checkov:skip=CKV_AWS_12
+  #checkov:skip=CKV2_AWS_11
+  #checkov:skip=CKV2_AWS_12
   cidr_block = var.network_cidr
   tags = merge(
     var.additional-tags,
@@ -44,7 +44,7 @@ resource "aws_route" "internet_access" {
 }
 
 resource "aws_eip" "gateway" {
-  #checkov:skip=CKV_AWS_19
+  #checkov:skip=CKV2_AWS_19
   count      = 2
   depends_on = [aws_internet_gateway.igateway]
 }

@@ -108,7 +108,7 @@ resource "aws_lb" "alb" {
   #checkov:skip=CKV_AWS_150
   #checkov:skip=CKV_AWS_131
   #checkov:skip=CKV_AWS_91
-  #checkov:skip=CKV_AWS_28
+  #checkov:skip=CKV2_AWS_28
   #checkov:skip=CKV_AWS_104
   enable_deletion_protection = false
   drop_invalid_header_fields = false
