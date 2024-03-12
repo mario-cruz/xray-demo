@@ -1,6 +1,6 @@
 #create a security group for RDS Database Instance
 resource "aws_security_group" "rds_sg" {
-  name = "rds_sg"
+  name        = "rds_sg"
   description = "rds SG"
   ingress {
     description = "ingress rds"
