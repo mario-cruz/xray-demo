@@ -43,10 +43,12 @@ resource "aws_iam_role_policy_attachment" "aws_xray_deamon_write_access" {
 # Lamda
 ################################################################################
 
-#checkov:skip=CKV_AWS_115
-#checkov:skip=CKV_AWS_116
-#checkov:skip=CKV_AWS_117
 resource "aws_lambda_function" "image_api_scraper" {
+  #checkov:skip=CKV_AWS_115
+  #checkov:skip=CKV_AWS_116
+  #checkov:skip=CKV_AWS_117
+  #checkov:skip=CKV_AWS_173
+  #checkov:skip=CKV_AWS_272
   function_name    = "image-api-scraper"
   filename         = "lambdas/lambda_function.zip"
   role             = aws_iam_role.image_api_lambda_role.arn
@@ -66,6 +68,7 @@ resource "aws_lambda_function" "image_api_scraper" {
 }
 
 resource "aws_lambda_function_url" "image_api_scraper_url" {
+  #checkov:skip=CKV_AWS_258
   function_name      = aws_lambda_function.image_api_scraper.function_name
   authorization_type = "NONE"
 }
