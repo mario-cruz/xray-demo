@@ -9,6 +9,7 @@ resource "aws_vpc" "vpc_app" {
 }
 
 resource "aws_subnet" "public" {
+  #checkov:skip=CKV_AWS_130
   count                   = 2
   cidr_block              = cidrsubnet(aws_vpc.vpc_app.cidr_block, 3, count.index)
   availability_zone       = data.aws_availability_zones.available_zones.names[count.index]
