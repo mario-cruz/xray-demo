@@ -137,8 +137,8 @@ resource "aws_lb_target_group" "tg" {
 # ECS Cluster
 ################################################################################
 
-#checkov:skip=CKV_AWS_65
 resource "aws_ecs_cluster" "app_cluster" {
+  #checkov:skip=CKV_AWS_65
   name = "app-ecs-cluster"
 }
 
@@ -163,9 +163,9 @@ resource "aws_ecs_service" "my_service" {
   depends_on = [aws_lb_listener.listener]
 }
 
-#checkov:skip=CKV_AWS_249
-#checkov:skip=CKV_AWS_336
 resource "aws_ecs_task_definition" "task01" {
+  #checkov:skip=CKV_AWS_249
+  #checkov:skip=CKV_AWS_336
   family                   = "demo-app"
   network_mode             = "awsvpc"
   requires_compatibilities = ["FARGATE"]
