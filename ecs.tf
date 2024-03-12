@@ -54,8 +54,8 @@ resource "aws_iam_role_policy" "create_log_group_pol" {
 # SG
 ################################################################################
 resource "aws_security_group" "alb" {
-  name   = "alb-sg"
-  vpc_id = aws_vpc.vpc_app.id
+  name        = "alb-sg"
+  vpc_id      = aws_vpc.vpc_app.id
   description = "ALB SG"
   #checkov:skip=CKV_AWS_260
   ingress {
@@ -76,12 +76,12 @@ resource "aws_security_group" "alb" {
 }
 
 resource "aws_security_group" "task01" {
-  name   = "task01-sg"
-  vpc_id = aws_vpc.vpc_app.id
+  name        = "task01-sg"
+  vpc_id      = aws_vpc.vpc_app.id
   description = "task01 SG"
 
   ingress {
-    description = "ingress MYSQL"
+    description     = "ingress MYSQL"
     protocol        = "tcp"
     from_port       = 3000
     to_port         = 3000
@@ -104,9 +104,9 @@ resource "aws_security_group" "task01" {
 #checkov:skip=CKV_AWS_131
 #checkov:skip=CKV_AWS_91
 resource "aws_lb" "alb" {
-  name            = "ecs-alb"
-  subnets         = aws_subnet.public.*.id
-  security_groups = [aws_security_group.alb.id]
+  name                       = "ecs-alb"
+  subnets                    = aws_subnet.public.*.id
+  security_groups            = [aws_security_group.alb.id]
   enable_deletion_protection = false
   drop_invalid_header_fields = false
 }
