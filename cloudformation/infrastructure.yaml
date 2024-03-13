@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: 2010-09-09
-Description: Build Infrastructure resources for persisting Terrafrom state files
+Description: Infrastructure for TTF state files
 Metadata:
   cfn-lint:
     config:
@@ -42,38 +42,40 @@ Resources:
           Value: "Github Action Workflow"
         - Key: Descriptio
           Value: !Sub "Terraform S3 Backend bucket which stores the terraform state for account ${AWS::AccountId}-${AWS::Region}."
-  # tfBackendBucketPolicy:
-  #   Type: 'AWS::S3::BucketPolicy'
-  #   Properties:
-  #     Bucket: !Ref tfBackendBucket
-  #     PolicyDocument:
-  #       Version: 2012-10-17
-  #       Statement:
-  #         - Sid: "AllowSSLRequestsOnly"
-  #           Action: 
-  #              - "s3:*"
-  #           Effect: "Deny"
-  #           Principal:
-  #             AWS: "*"
-  #           Resource:
-  #             - !Sub arn:${AWS::Partition}:s3:::${tfBackendBucket}
-  #             - !Sub arn:${AWS::Partition}:s3:::${tfBackendBucket}/*
-  #           Condition:
-  #             Bool:
-  #               aws:SecureTransport: "false"
-  #         - Sid: "RequireEncryptedStorage"
-  #           Action:
-  #             - "s3:PutObject"
-  #           Effect: "Deny"
-  #           Resource:
-  #             - !Sub arn:${AWS::Partition}:s3:::${tfBackendBucket}
-  #             - !Sub arn:${AWS::Partition}:s3:::${tfBackendBucket}/*
-  #           Principal: '*'  
-  #           Condition:
-  #             'Null':
-  #               s3:x-amz-server-side-encryption: false
-  #             StringNotEquals:
-  #               s3:x-amz-server-side-encryption: 'aws:kms'
+  tfBackendBucketPolicy:
+    Type: 'AWS::S3::BucketPolicy'
+    Properties:
+      Bucket: !Ref tfBackendBucket
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: "AllowSSLRequestsOnly"
+            Action: 
+               - "s3:*"
+            Effect: "Deny"
+            Principal:
+              AWS: "*"
+            Resource:
+              - !Sub arn:${AWS::Partition}:s3:::${tfBackendBucket}
+              - !Sub arn:${AWS::Partition}:s3:::${tfBackendBucket}/*
+            Condition:
+              Bool:
+                aws:SecureTransport: "false"
+          - Sid: "RequireEncryptedStorage"
+            Action:
+              - "s3:PutObject"
+            Effect: "Deny"
+            Resource:
+              - !Sub arn:${AWS::Partition}:s3:::${tfBackendBucket}
+              - !Sub arn:${AWS::Partition}:s3:::${tfBackendBucket}/*
+            Principal: '*'  
+            Condition:
+              StringNotEquals:
+                s3:x-amz-server-side-encryption": "AES256"
+              # 'Null':
+              #   s3:x-amz-server-side-encryption: false
+              # StringNotEquals:
+              #   s3:x-amz-server-side-encryption: 'aws:kms'
   tfBackendLogsBucket:
     Type: AWS::S3::Bucket
     Properties:
