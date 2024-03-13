@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: 2010-09-09
-Description: Infrastructure for TTF state files
+Description: Infrastructure for TF state files
 Metadata:
   cfn-lint:
     config:
@@ -7,7 +7,7 @@ Metadata:
         - W3045
 Parameters:
   prefix:
-    Description: The prefix of identifier
+    Description: The prefix of the identifiers
     Type: String
     Default: mac-
   bucketIdentifier:
@@ -42,9 +42,11 @@ Resources:
         DestinationBucketName: !Ref tfBackendLogsBucket
         LogFilePrefix: logs
       Tags:
+        - Key: CreatedFor
+          Value: Terrafrom-State
         - Key: CreatedBy
-          Value: "Github Action Workflow"
-        - Key: Descriptio
+          Value: "CFN Template for TF Backend"
+        - Key: Description
           Value: !Sub "Terraform S3 Backend bucket which stores the terraform state for account ${AWS::AccountId}-${AWS::Region}."
   tfBackendBucketPolicy:
     Type: 'AWS::S3::BucketPolicy'
@@ -124,8 +126,8 @@ Resources:
                 'aws:SourceAccount': !Sub '${AWS::AccountId}' 
   tfBackendStateLockTable:
     Type: AWS::DynamoDB::Table
-    UpdateReplacePolicy: Retain
-    DeletionPolicy: Retain
+    UpdateReplacePolicy: Delete
+    DeletionPolicy: Delete
     Properties:
       AttributeDefinitions:
         - 
@@ -143,4 +145,4 @@ Resources:
         - Key: CreatedFor
           Value: Terrafrom-Lock
         - Key: CreatedBy
-          Value: "Github Action Workflow"
+          Value: "CFN Template for TF Backend"
