@@ -10,15 +10,19 @@ Parameters:
     Description: The prefix of identifier
     Type: String
     Default: mac-
-  identifier:
-    Description: The identifier for resources
+  bucketIdentifier:
+    Description: The identifier for the S3 bucket resources
     Type: String
-    Default: tf-state-bucket
+    Default: tf-state
+  dynamoIdentifier:
+    Description: The identifier for DynamoDB table
+    Type: String
+    Default: tf-lock
 Resources:
   tfBackendBucket:
     Type: AWS::S3::Bucket
     Properties: 
-      BucketName: !Sub ${prefix}${identifier}-${AWS::AccountId}-${AWS::Region}
+      BucketName: !Sub ${prefix}${bucketIdentifier}-${AWS::AccountId}-${AWS::Region}
       OwnershipControls:
         Rules:
           - ObjectOwnership: BucketOwnerPreferred
@@ -56,7 +60,7 @@ Resources:
             Principal:
               AWS: "*"
             Resource:
-              - !Sub arn:${AWS::Partition}:s3:::${tfBackendBucket}
+              # - !Sub arn:${AWS::Partition}:s3:::${tfBackendBucket}
               - !Sub arn:${AWS::Partition}:s3:::${tfBackendBucket}/*
             Condition:
               Bool:
@@ -66,12 +70,12 @@ Resources:
               - "s3:PutObject"
             Effect: "Deny"
             Resource:
-              - !Sub arn:${AWS::Partition}:s3:::${tfBackendBucket}
+              # - !Sub arn:${AWS::Partition}:s3:::${tfBackendBucket}
               - !Sub arn:${AWS::Partition}:s3:::${tfBackendBucket}/*
             Principal: '*'  
             Condition:
               StringNotEquals:
-                s3:x-amz-server-side-encryption": "AES256"
+                s3:x-amz-server-side-encryption: "AES256"
               # 'Null':
               #   s3:x-amz-server-side-encryption: false
               # StringNotEquals:
@@ -92,7 +96,7 @@ Resources:
         IgnorePublicAcls: true
         RestrictPublicBuckets: true
       AccessControl: LogDeliveryWrite
-      BucketName: !Sub ${prefix}${identifier}-logs-${AWS::AccountId}-${AWS::Region}
+      BucketName: !Sub ${prefix}${bucketIdentifier}-logs-${AWS::AccountId}-${AWS::Region}
       Tags:
         - Key: CreatedBy
           Value: "Github Action Workflow"
@@ -134,7 +138,7 @@ Resources:
       ProvisionedThroughput: 
         ReadCapacityUnits: 5
         WriteCapacityUnits: 5
-      TableName: !Sub ${prefix}${identifier}-${AWS::AccountId}-${AWS::Region}
+      TableName: !Sub ${prefix}${dynamoIdentifier}-${AWS::AccountId}-${AWS::Region}
       Tags:
         - Key: CreatedFor
           Value: Terrafrom-Lock
