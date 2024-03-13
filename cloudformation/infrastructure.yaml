@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: 2010-09-09
-Description: Build Infrastructure resources for persisting Terrafrom state files
+Description: Infrastructure for TF state files
 Metadata:
   cfn-lint:
     config:
@@ -7,18 +7,22 @@ Metadata:
         - W3045
 Parameters:
   prefix:
-    Description: The prefix of identifier
+    Description: The prefix of the identifiers
     Type: String
     Default: mac-
-  identifier:
-    Description: The identifier for resources
+  bucketIdentifier:
+    Description: The identifier for the S3 bucket resources
     Type: String
-    Default: tf-state-bucket
+    Default: tf-state
+  dynamoIdentifier:
+    Description: The identifier for DynamoDB table
+    Type: String
+    Default: tf-lock
 Resources:
   tfBackendBucket:
     Type: AWS::S3::Bucket
     Properties: 
-      BucketName: !Sub ${prefix}${identifier}-${AWS::AccountId}-${AWS::Region}
+      BucketName: !Sub ${prefix}${bucketIdentifier}-${AWS::AccountId}-${AWS::Region}
       OwnershipControls:
         Rules:
           - ObjectOwnership: BucketOwnerPreferred
@@ -38,9 +42,11 @@ Resources:
         DestinationBucketName: !Ref tfBackendLogsBucket
         LogFilePrefix: logs
       Tags:
+        - Key: CreatedFor
+          Value: Terrafrom-State
         - Key: CreatedBy
-          Value: "Github Action Workflow"
-        - Key: Descriptio
+          Value: "CFN Template for TF Backend"
+        - Key: Description
           Value: !Sub "Terraform S3 Backend bucket which stores the terraform state for account ${AWS::AccountId}-${AWS::Region}."
   tfBackendBucketPolicy:
     Type: 'AWS::S3::BucketPolicy'
@@ -56,7 +62,7 @@ Resources:
             Principal:
               AWS: "*"
             Resource:
-              - !Sub arn:${AWS::Partition}:s3:::${tfBackendBucket}
+              # - !Sub arn:${AWS::Partition}:s3:::${tfBackendBucket}
               - !Sub arn:${AWS::Partition}:s3:::${tfBackendBucket}/*
             Condition:
               Bool:
@@ -66,14 +72,16 @@ Resources:
               - "s3:PutObject"
             Effect: "Deny"
             Resource:
-              - !Sub arn:${AWS::Partition}:s3:::${tfBackendBucket}
+              # - !Sub arn:${AWS::Partition}:s3:::${tfBackendBucket}
               - !Sub arn:${AWS::Partition}:s3:::${tfBackendBucket}/*
             Principal: '*'  
             Condition:
-              'Null':
-                s3:x-amz-server-side-encryption: false
               StringNotEquals:
-                s3:x-amz-server-side-encryption: 'aws:kms'
+                s3:x-amz-server-side-encryption: "AES256"
+              # 'Null':
+              #   s3:x-amz-server-side-encryption: false
+              # StringNotEquals:
+              #   s3:x-amz-server-side-encryption: 'aws:kms'
   tfBackendLogsBucket:
     Type: AWS::S3::Bucket
     Properties:
@@ -90,7 +98,7 @@ Resources:
         IgnorePublicAcls: true
         RestrictPublicBuckets: true
       AccessControl: LogDeliveryWrite
-      BucketName: !Sub ${prefix}${identifier}-logs-${AWS::AccountId}-${AWS::Region}
+      BucketName: !Sub ${prefix}${bucketIdentifier}-logs-${AWS::AccountId}-${AWS::Region}
       Tags:
         - Key: CreatedBy
           Value: "Github Action Workflow"
@@ -118,8 +126,8 @@ Resources:
                 'aws:SourceAccount': !Sub '${AWS::AccountId}' 
   tfBackendStateLockTable:
     Type: AWS::DynamoDB::Table
-    UpdateReplacePolicy: Retain
-    DeletionPolicy: Retain
+    UpdateReplacePolicy: Delete
+    DeletionPolicy: Delete
     Properties:
       AttributeDefinitions:
         - 
@@ -132,9 +140,9 @@ Resources:
       ProvisionedThroughput: 
         ReadCapacityUnits: 5
         WriteCapacityUnits: 5
-      TableName: !Sub ${prefix}${identifier}-${AWS::AccountId}-${AWS::Region}
+      TableName: !Sub ${prefix}${dynamoIdentifier}-${AWS::AccountId}-${AWS::Region}
       Tags:
         - Key: CreatedFor
           Value: Terrafrom-Lock
         - Key: CreatedBy
-          Value: "Github Action Workflow"
+          Value: "CFN Template for TF Backend"
