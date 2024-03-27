@@ -20,7 +20,6 @@ from urllib3.exceptions import ReadTimeoutError as URLLib3ReadTimeoutError
 from urllib3.exceptions import SSLError as URLLib3SSLError
 from urllib3.util.retry import Retry
 from urllib3.util.ssl_ import (
-    DEFAULT_CIPHERS,
     OP_NO_COMPRESSION,
     PROTOCOL_TLS,
     OP_NO_SSLv2,
@@ -48,6 +47,14 @@ try:
         )
 except ImportError:
     from urllib3.util.ssl_ import SSLContext
+
+try:
+    from urllib3.util.ssl_ import DEFAULT_CIPHERS
+except ImportError:
+    # Defer to system configuration starting with
+    # urllib3 2.0. This will choose the ciphers provided by
+    # Openssl 1.1.1+ or secure system defaults.
+    DEFAULT_CIPHERS = None
 
 import botocore.awsrequest
 from botocore.compat import (
@@ -106,7 +113,10 @@ def create_urllib3_context(
 
     context = SSLContext(ssl_version)
 
-    context.set_ciphers(ciphers or DEFAULT_CIPHERS)
+    if ciphers:
+        context.set_ciphers(ciphers)
+    elif DEFAULT_CIPHERS:
+        context.set_ciphers(DEFAULT_CIPHERS)
 
     # Setting the default here, as we may have no ssl module on import
     cert_reqs = ssl.CERT_REQUIRED if cert_reqs is None else cert_reqs
@@ -207,7 +217,7 @@ class ProxyConfiguration:
     """Represents a proxy configuration dictionary and additional settings.
 
     This class represents a proxy configuration dictionary and provides utility
-    functions to retreive well structured proxy urls and proxy headers from the
+    functions to retrieve well structured proxy urls and proxy headers from the
     proxy configuration dictionary.
     """
 
@@ -325,7 +335,6 @@ class URLLib3Session:
 
     def _get_pool_manager_kwargs(self, **extra_kwargs):
         pool_manager_kwargs = {
-            'strict': True,
             'timeout': self._timeout,
             'maxsize': self._max_pool_connections,
             'ssl_context': self._get_ssl_context(),

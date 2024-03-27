@@ -73,7 +73,7 @@ class BaseEventHooks:
         :type **kwargs: dict
         :param **kwargs: Arbitrary kwargs to pass through to the
             subscribed handlers.  The ``event_name`` will be injected
-            into the kwargs so it's not necesary to add this to **kwargs.
+            into the kwargs so it's not necessary to add this to **kwargs.
 
         :rtype: list of tuples
         :return: A list of ``(handler_func, handler_func_return_value)``
@@ -456,7 +456,6 @@ class EventAliaser(BaseEventHooks):
             return self._alias_name_cache[event_name]
 
         for old_part, new_part in self._event_aliases.items():
-
             # We can't simply do a string replace for everything, otherwise we
             # might end up translating substrings that we never intended to
             # translate. When there aren't any dots in the old event name

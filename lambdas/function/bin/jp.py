@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!C:\Program Files\Python311\python.exe
 
 import sys
 import json

@@ -12,6 +12,7 @@
 # language governing permissions and limitations under the License.
 import os
 
+from botocore import xform_name
 from botocore.compat import OrderedDict
 from botocore.docs.bcdoc.restdoc import DocumentStructure
 from botocore.docs.example import ResponseExampleDocumenter
@@ -142,10 +143,22 @@ class ClientDocumenter:
             method_doc_structure.write_to_file(client_dir_path, method_name)
 
     def _add_client_method(self, section, method_name, method):
+        breadcrumb_section = section.add_new_section('breadcrumb')
+        breadcrumb_section.style.ref(
+            self._client_class_name, f'../../{self._service_name}'
+        )
+        breadcrumb_section.write(f' / Client / {method_name}')
         section.add_title_section(method_name)
-        method_section = section.add_new_section(method_name)
+        method_section = section.add_new_section(
+            method_name,
+            context={'qualifier': f'{self._client_class_name}.Client.'},
+        )
         if self._is_custom_method(method_name):
-            self._add_custom_method(method_section, method_name, method)
+            self._add_custom_method(
+                method_section,
+                method_name,
+                method,
+            )
         else:
             self._add_model_driven_method(method_section, method_name)
 
@@ -172,9 +185,12 @@ class ClientDocumenter:
         operation_model = service_model.operation_model(operation_name)
 
         example_prefix = 'response = client.%s' % method_name
+        full_method_name = (
+            f"{section.context.get('qualifier', '')}{method_name}"
+        )
         document_model_driven_method(
             section,
-            method_name,
+            full_method_name,
             operation_model,
             event_emitter=self._client.meta.events,
             method_description=operation_model.documentation,
@@ -297,6 +313,11 @@ class ClientExceptionsDocumenter:
             )
 
     def _add_exception_class(self, section, shape):
+        breadcrumb_section = section.add_new_section('breadcrumb')
+        breadcrumb_section.style.ref(
+            self._client_class_name, f'../../../{self._service_name}'
+        )
+        breadcrumb_section.write(f' / Client / exceptions / {shape.name}')
         section.add_title_section(shape.name)
         class_section = section.add_new_section(shape.name)
         class_name = self._exception_class_name(shape)
@@ -315,6 +336,7 @@ class ClientExceptionsDocumenter:
     def _add_exception_catch_example(self, section, shape):
         section.style.new_line()
         section.style.bold('Example')
+        section.style.new_paragraph()
         section.style.start_codeblock()
         section.write('try:')
         section.style.indent()
@@ -378,3 +400,56 @@ class ClientExceptionsDocumenter:
             shape,
             include=[self._GENERIC_ERROR_SHAPE],
         )
+
+
+class ClientContextParamsDocumenter:
+    _CONFIG_GUIDE_LINK = (
+        'https://boto3.amazonaws.com/'
+        'v1/documentation/api/latest/guide/configuration.html'
+    )
+
+    OMITTED_CONTEXT_PARAMS = {
+        's3': (
+            'Accelerate',
+            'DisableMultiRegionAccessPoints',
+            'ForcePathStyle',
+            'UseArnRegion',
+        ),
+        's3control': ('UseArnRegion',),
+    }
+
+    def __init__(self, service_name, context_params):
+        self._service_name = service_name
+        self._context_params = context_params
+
+    def document_context_params(self, section):
+        self._add_title(section)
+        self._add_overview(section)
+        self._add_context_params_list(section)
+
+    def _add_title(self, section):
+        section.style.h2('Client Context Parameters')
+
+    def _add_overview(self, section):
+        section.style.new_line()
+        section.write(
+            'Client context parameters are configurable on a client '
+            'instance via the ``client_context_params`` parameter in the '
+            '``Config`` object. For more detailed instructions and examples '
+            'on the exact usage of context params see the '
+        )
+        section.style.external_link(
+            title='configuration guide',
+            link=self._CONFIG_GUIDE_LINK,
+        )
+        section.write('.')
+        section.style.new_line()
+
+    def _add_context_params_list(self, section):
+        section.style.new_line()
+        sn = f'``{self._service_name}``'
+        section.writeln(f'The available {sn} client context params are:')
+        for param in self._context_params:
+            section.style.new_line()
+            name = f'``{xform_name(param.name)}``'
+            section.write(f'* {name} ({param.type}) - {param.documentation}')

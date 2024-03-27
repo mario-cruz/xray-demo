@@ -353,13 +353,15 @@ class ResponseParser:
 
     def _has_unknown_tagged_union_member(self, shape, value):
         if shape.is_tagged_union:
-            if len(value) != 1:
+            cleaned_value = value.copy()
+            cleaned_value.pop("__type", None)
+            if len(cleaned_value) != 1:
                 error_msg = (
                     "Invalid service response: %s must have one and only "
                     "one member set."
                 )
                 raise ResponseParserError(error_msg % shape.name)
-            tag = self._get_first_key(value)
+            tag = self._get_first_key(cleaned_value)
             if tag not in shape.members:
                 msg = (
                     "Received a tagged union response with member "
@@ -699,25 +701,36 @@ class BaseJSONParser(ResponseParser):
         # if the message did not contain an error code
         # include the response status code
         response_code = response.get('status_code')
-        # Error response may contain an x-amzn-query-error header for json
-        # we need to fetch the error code from this header in that case
-        query_error = headers.get('x-amzn-query-error', '')
-        query_error_components = query_error.split(';')
-        code = None
-        if len(query_error_components) == 2 and query_error_components[0]:
-            code = query_error_components[0]
-            error['Error']['Type'] = query_error_components[1]
-        if code is None:
-            code = body.get('__type', response_code and str(response_code))
+
+        code = body.get('__type', response_code and str(response_code))
         if code is not None:
             # code has a couple forms as well:
             # * "com.aws.dynamodb.vAPI#ProvisionedThroughputExceededException"
             # * "ResourceNotFoundException"
             if '#' in code:
                 code = code.rsplit('#', 1)[1]
+            if 'x-amzn-query-error' in headers:
+                code = self._do_query_compatible_error_parse(
+                    code, headers, error
+                )
             error['Error']['Code'] = code
         self._inject_response_metadata(error, response['headers'])
         return error
+
+    def _do_query_compatible_error_parse(self, code, headers, error):
+        """
+        Error response may contain an x-amzn-query-error header to translate
+        errors codes from former `query` services into `json`. We use this to
+        do our lookup in the errorfactory for modeled errors.
+        """
+        query_error = headers['x-amzn-query-error']
+        query_error_components = query_error.split(';')
+
+        if len(query_error_components) == 2 and query_error_components[0]:
+            error['Error']['QueryErrorCode'] = code
+            error['Error']['Type'] = query_error_components[1]
+            return query_error_components[0]
+        return code
 
     def _inject_response_metadata(self, parsed, headers):
         if 'x-amzn-requestid' in headers:
@@ -834,7 +847,6 @@ class EventStreamXMLParser(BaseEventStreamParser, BaseXMLResponseParser):
 
 
 class JSONParser(BaseJSONParser):
-
     EVENT_STREAM_PARSER_CLS = EventStreamJSONParser
 
     """Response parser for the "json" protocol."""
@@ -994,7 +1006,6 @@ class BaseRestParser(ResponseParser):
 
 
 class RestJSONParser(BaseRestParser, BaseJSONParser):
-
     EVENT_STREAM_PARSER_CLS = EventStreamJSONParser
 
     def _initial_body_parse(self, body_contents):
@@ -1025,7 +1036,6 @@ class RestJSONParser(BaseRestParser, BaseJSONParser):
 
 
 class RestXMLParser(BaseRestParser, BaseXMLResponseParser):
-
     EVENT_STREAM_PARSER_CLS = EventStreamXMLParser
 
     def _initial_body_parse(self, xml_string):
@@ -1091,7 +1101,7 @@ class RestXMLParser(BaseRestParser, BaseXMLResponseParser):
             parsed.pop('HostId', '')
             return {'Error': parsed, 'ResponseMetadata': metadata}
         elif 'RequestId' in parsed:
-            # Other rest-xml serivces:
+            # Other rest-xml services:
             parsed['ResponseMetadata'] = {'RequestId': parsed.pop('RequestId')}
         default = {'Error': {'Message': '', 'Code': ''}}
         merge_dicts(default, parsed)

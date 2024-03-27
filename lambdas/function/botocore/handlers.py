@@ -61,6 +61,7 @@ from botocore.signers import (
 from botocore.utils import (
     SAFE_CHARS,
     ArnParser,
+    conditionally_calculate_checksum,
     conditionally_calculate_md5,
     percent_encode,
     switch_host_with_param,
@@ -73,6 +74,7 @@ from botocore.compat import MD5_AVAILABLE  # noqa
 from botocore.exceptions import MissingServiceIdError  # noqa
 from botocore.utils import hyphenize_service_id  # noqa
 from botocore.utils import is_global_accesspoint  # noqa
+from botocore.utils import SERVICE_NAME_ALIASES  # noqa
 
 
 logger = logging.getLogger(__name__)
@@ -96,10 +98,8 @@ _OUTPOST_ARN = (
 VALID_S3_ARN = re.compile('|'.join([_ACCESSPOINT_ARN, _OUTPOST_ARN]))
 # signing names used for the services s3 and s3-control, for example in
 # botocore/data/s3/2006-03-01/endpoints-rule-set-1.json
-S3_SIGNING_NAMES = ('s3', 's3-outposts', 's3-object-lambda')
+S3_SIGNING_NAMES = ('s3', 's3-outposts', 's3-object-lambda', 's3express')
 VERSION_ID_SUFFIX = re.compile(r'\?versionId=[^\s]+$')
-
-SERVICE_NAME_ALIASES = {'runtime.sagemaker': 'sagemaker-runtime'}
 
 
 def handle_service_name_alias(service_name, **kwargs):
@@ -204,6 +204,9 @@ def set_operation_specific_signer(context, signing_name, **kwargs):
         return 'bearer'
 
     if auth_type.startswith('v4'):
+        if auth_type == 'v4-s3express':
+            return auth_type
+
         if auth_type == 'v4a':
             # If sigv4a is chosen, we must add additional signing config for
             # global signature.
@@ -343,6 +346,14 @@ def add_expect_header(model, params, **kwargs):
     if 'body' in params:
         body = params['body']
         if hasattr(body, 'read'):
+            check_body = utils.ensure_boolean(
+                os.environ.get(
+                    'BOTO_EXPERIMENTAL__NO_EMPTY_CONTINUE',
+                    False,
+                )
+            )
+            if check_body and utils.determine_content_length(body) == 0:
+                return
             # Any file like object will use an expect 100-continue
             # header regardless of size.
             logger.debug("Adding expect 100 continue header to request.")
@@ -840,7 +851,7 @@ def _decode_list_object(top_level_keys, nested_keys, parsed, context):
             if key in parsed:
                 parsed[key] = unquote_str(parsed[key])
         # URL decode nested keys from the response if present.
-        for (top_key, child_key) in nested_keys:
+        for top_key, child_key in nested_keys:
             if top_key in parsed:
                 for member in parsed[top_key]:
                     member[child_key] = unquote_str(member[child_key])
@@ -1050,6 +1061,10 @@ def remove_bucket_from_url_paths_from_model(params, model, context, **kwargs):
     bucket_path = '/{Bucket}'
     if req_uri.startswith(bucket_path):
         model.http['requestUri'] = req_uri[len(bucket_path) :]
+        # Strip query off the requestUri before using as authPath. The
+        # HmacV1Auth signer will append query params to the authPath during
+        # signing.
+        req_uri = req_uri.split('?')[0]
         # If the request URI is ONLY a bucket, the auth_path must be
         # terminated with a '/' character to generate a signature that the
         # server will accept.
@@ -1132,9 +1147,18 @@ def customize_endpoint_resolver_builtins(
         and not path_style_required
         and not path_style_requested
         and not bucket_is_arn
+        and not utils.is_s3express_bucket(bucket_name)
     ):
         builtins[EndpointResolverBuiltins.AWS_REGION] = 'aws-global'
         builtins[EndpointResolverBuiltins.AWS_S3_USE_GLOBAL_ENDPOINT] = True
+
+
+def remove_content_type_header_for_presigning(request, **kwargs):
+    if (
+        request.context.get('is_presign_request') is True
+        and 'Content-Type' in request.headers
+    ):
+        del request.headers['Content-Type']
 
 
 # This is a list of (event_name, handler).
@@ -1196,9 +1220,10 @@ BUILTIN_HANDLERS = [
     ('before-call.s3', add_expect_header),
     ('before-call.glacier', add_glacier_version),
     ('before-call.apigateway', add_accept_header),
-    ('before-call.s3.PutObject', conditionally_calculate_md5),
+    ('before-call.s3.PutObject', conditionally_calculate_checksum),
     ('before-call.s3.UploadPart', conditionally_calculate_md5),
     ('before-call.s3.DeleteObjects', escape_xml_payload),
+    ('before-call.s3.DeleteObjects', conditionally_calculate_checksum),
     ('before-call.s3.PutBucketLifecycleConfiguration', escape_xml_payload),
     ('before-call.glacier.UploadArchive', add_glacier_checksums),
     ('before-call.glacier.UploadMultipartPart', add_glacier_checksums),
@@ -1231,6 +1256,7 @@ BUILTIN_HANDLERS = [
     ('before-parameter-build.s3.UploadPart', sse_md5),
     ('before-parameter-build.s3.UploadPartCopy', sse_md5),
     ('before-parameter-build.s3.UploadPartCopy', copy_source_sse_md5),
+    ('before-parameter-build.s3.CompleteMultipartUpload', sse_md5),
     ('before-parameter-build.s3.SelectObjectContent', sse_md5),
     ('before-parameter-build.ec2.RunInstances', base64_encode_user_data),
     (
@@ -1240,6 +1266,10 @@ BUILTIN_HANDLERS = [
     ('before-parameter-build.route53', fix_route53_ids),
     ('before-parameter-build.glacier', inject_account_id),
     ('before-sign.s3', remove_arn_from_signing_path),
+    (
+        'before-sign.polly.SynthesizeSpeech',
+        remove_content_type_header_for_presigning,
+    ),
     ('after-call.s3.ListObjects', decode_list_object),
     ('after-call.s3.ListObjectsV2', decode_list_object_v2),
     ('after-call.s3.ListObjectVersions', decode_list_object_versions),
@@ -1389,15 +1419,6 @@ BUILTIN_HANDLERS = [
     (
         'docs.*.docdb.CreateDBCluster.complete-section',
         AutoPopulatedParam('PreSignedUrl').document_auto_populated_param,
-    ),
-    ###########
-    # SMS Voice
-    ###########
-    (
-        'docs.title.sms-voice',
-        DeprecatedServiceDocumenter(
-            'pinpoint-sms-voice'
-        ).inject_deprecation_notice,
     ),
     ('before-call', inject_api_version_header_if_needed),
 ]
